@@ -35,9 +35,9 @@ public class AuthController {
     }
 
     @PostMapping("/api/users/verify-otp")
-    public ResponseEntity<ApiResponse<Void>> verifyOtp(@RequestParam String email, @RequestParam String otp) {
-        authService.verifyOtp(email, otp);
-        return ResponseEntity.ok(ApiResponse.success(null, "OTP verified successfully"));
+    public ResponseEntity<ApiResponse<AuthResponse>> verifyOtp(@RequestParam String email, @RequestParam String otp) {
+        AuthResponse response = authService.verifyOtp(email, otp);
+        return ResponseEntity.ok(ApiResponse.success(response, "OTP verified successfully"));
     }
 
     @PostMapping("/api/users/reset-password")

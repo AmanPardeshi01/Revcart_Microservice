@@ -99,7 +99,7 @@ public class AuthService {
     }
 
     @Transactional
-    public void verifyOtp(String email, String otp) {
+    public AuthResponse verifyOtp(String email, String otp) {
         OtpToken otpToken = otpTokenRepository.findByEmailAndOtpAndUsedFalse(email, otp)
                 .orElseThrow(() -> new BadRequestException("Invalid or expired OTP"));
 
@@ -110,6 +110,12 @@ public class AuthService {
         otpToken.setUsed(true);
         otpTokenRepository.save(otpToken);
         log.info("OTP verified for: {}", email);
+
+        // Return auth response with token after successful verification
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new BadRequestException("User not found"));
+        String token = jwtTokenProvider.generateToken(user.getEmail(), user.getId());
+        return new AuthResponse(token, toDto(user));
     }
 
     @Transactional

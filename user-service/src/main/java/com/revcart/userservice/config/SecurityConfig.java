@@ -31,7 +31,18 @@ public class SecurityConfig {
                 .cors(cors -> {}) // <-- ADD THIS LINE
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/users/register", "/api/users/login", "/api/users/all", "/api/users/{id}", "/actuator/**").permitAll()
+                        .requestMatchers(
+                                "/api/users/register",
+                                "/api/users/login",
+                                "/api/users/verify-otp",
+                                "/api/users/resend-otp",
+                                "/api/users/reset-password",
+                                "/api/users/all",
+                                "/api/users/{id}",
+                                "/api/users/test-**",
+                                "/api/users/generate-hash",
+                                "/actuator/**"
+                        ).permitAll()
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);

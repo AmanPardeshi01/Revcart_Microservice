@@ -146,12 +146,8 @@ export class AuthService {
                   role: this.mapRole(authData.user.role)
                 };
 
-                this.userSignal.set(user);
-
-                if (isPlatformBrowser(this.platformId)) {
-                  localStorage.setItem('revcart_user', JSON.stringify(user));
-                  localStorage.setItem('revcart_token', authData.token);
-                }
+                // DON'T set user signal or store in localStorage yet
+                // User must verify OTP first
 
                 subscriber.next(user);
                 subscriber.complete();
@@ -179,7 +175,7 @@ export class AuthService {
 
   verifyOtp(email: string, otp: string): Observable<void> {
     return this.httpClient
-      .post<ApiResponse<string>>(`${this.apiUrl}/verify-otp`, null, {
+      .post<ApiResponse<BackendAuthResponse>>(`${this.apiUrl}/verify-otp`, null, {
         params: { email, otp }
       })
       .pipe((source) =>
@@ -192,6 +188,25 @@ export class AuthService {
                 );
                 return;
               }
+
+              // NOW store user and token after OTP verification
+              if (response.data) {
+                const authData = response.data;
+                const user: User = {
+                  id: authData.user.id,
+                  email: authData.user.email,
+                  name: authData.user.name,
+                  role: this.mapRole(authData.user.role)
+                };
+
+                this.userSignal.set(user);
+
+                if (isPlatformBrowser(this.platformId)) {
+                  localStorage.setItem('revcart_user', JSON.stringify(user));
+                  localStorage.setItem('revcart_token', authData.token);
+                }
+              }
+
               subscriber.next();
               subscriber.complete();
             },
