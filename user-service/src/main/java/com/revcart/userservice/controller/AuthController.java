@@ -17,8 +17,15 @@ public class AuthController {
     @PostMapping("/api/users/register")
     public ResponseEntity<ApiResponse<AuthResponse>> register(@Valid @RequestBody RegisterRequest request) {
         AuthResponse response = authService.register(request);
+        // Automatically send OTP after registration
+        try {
+            authService.generateOtp(request.getEmail());
+        } catch (Exception e) {
+            // Log but don't fail registration if OTP send fails
+            System.err.println("Failed to send OTP after registration: " + e.getMessage());
+        }
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.success(response, "User registered successfully"));
+                .body(ApiResponse.success(response, "User registered successfully. OTP sent to your email."));
     }
 
     @PostMapping("/api/users/login")

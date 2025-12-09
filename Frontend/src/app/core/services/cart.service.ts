@@ -1,8 +1,9 @@
-import { Injectable, signal, computed, Inject, PLATFORM_ID } from '@angular/core';
+import { Injectable, signal, computed, Inject, PLATFORM_ID, inject } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { CartItem } from '../models/cart.model';
 import { Product } from '../models/product.model';
+import { NotificationService } from './notification.service';
 import { environment } from '../../../environments/environment';
 
 @Injectable({
@@ -20,6 +21,8 @@ export class CartService {
   itemCount = computed(() =>
     this.itemsSignal().reduce((sum, item) => sum + item.quantity, 0)
   );
+
+  private notificationService = inject(NotificationService);
 
   constructor(
     @Inject(PLATFORM_ID) private platformId: Object,
@@ -72,6 +75,7 @@ export class CartService {
           i.id === product.id ? { ...i, quantity: i.quantity + quantity } : i
         )
       );
+      this.notificationService.success('Cart Updated', `${product.name} quantity increased`);
     } else {
       // Add new item
       this.itemsSignal.update(items => [
@@ -86,6 +90,7 @@ export class CartService {
           availableQuantity: product.availableQuantity
         } satisfies CartItem
       ]);
+      this.notificationService.success('Added to Cart', `${product.name} added to cart`);
     }
 
     this.saveCartToStorage();

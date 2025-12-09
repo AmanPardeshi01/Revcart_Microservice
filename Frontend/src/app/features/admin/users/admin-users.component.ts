@@ -49,6 +49,7 @@ interface ApiResponse<T> {
                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Role</th>
                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Verified</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Change Role</th>
                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
               </tr>
             </thead>
@@ -83,6 +84,17 @@ interface ApiResponse<T> {
                     </td>
                     <td class="px-6 py-4">
                       <span class="text-sm text-gray-600">N/A</span>
+                    </td>
+                    <td class="px-6 py-4">
+                      <select
+                        [value]="user.role"
+                        (change)="changeUserRole(user.id, $event)"
+                        class="px-2 py-1 border rounded text-sm"
+                      >
+                        <option value="USER">Customer</option>
+                        <option value="ADMIN">Admin</option>
+                        <option value="DELIVERY_AGENT">Delivery Agent</option>
+                      </select>
                     </td>
                     <td class="px-6 py-4">
                       <button
@@ -244,6 +256,39 @@ export class AdminUsersComponent implements OnInit {
   loadPage(page: number): void {
     this.currentPage = page;
     this.loadUsers();
+  }
+
+  changeUserRole(userId: number, event: Event): void {
+    const select = event.target as HTMLSelectElement;
+    const newRole = select.value;
+    const oldRole = this.users.find(u => u.id === userId)?.role || 'USER';
+    
+    if (confirm(`Are you sure you want to change this user's role to ${this.getRoleLabel(newRole)}?`)) {
+      this.http.put<ApiResponse<UserDto>>(
+        `${environment.apiUrl}/admin/users/${userId}/role`,
+        { role: newRole }
+      ).subscribe({
+        next: (response) => {
+          if (response.success) {
+            const user = this.users.find(u => u.id === userId);
+            if (user) {
+              user.role = newRole;
+            }
+            alert('User role updated successfully');
+          } else {
+            alert('Failed to update user role');
+            select.value = oldRole;
+          }
+        },
+        error: (err) => {
+          console.error('Failed to update role:', err);
+          alert('Failed to update user role: ' + (err.error?.message || err.message));
+          select.value = oldRole;
+        }
+      });
+    } else {
+      select.value = oldRole;
+    }
   }
 }
 

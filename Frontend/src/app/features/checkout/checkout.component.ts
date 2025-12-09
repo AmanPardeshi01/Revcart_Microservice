@@ -7,8 +7,8 @@ import { CartService } from '../../core/services/cart.service';
 import { AuthService } from '../../core/services/auth.service';
 import { OrderService } from '../../core/services/order.service';
 import { PaymentService } from '../../core/services/payment.service';
-import { PaymentFormModalComponent, CardDetails } from '../../shared/components/payment-form-modal/payment-form-modal.component';
-import { UpiPaymentModalComponent, UpiDetails } from '../../shared/components/upi-payment-modal/upi-payment-modal.component';
+import { NotificationService } from '../../core/services/notification.service';
+
 import { environment } from '../../../environments/environment';
 import { LucideAngularModule, CreditCard, MapPin } from 'lucide-angular';
 
@@ -32,7 +32,7 @@ interface ApiResponse<T> {
 @Component({
     selector: 'app-checkout',
     standalone: true,
-    imports: [CommonModule, FormsModule, LucideAngularModule, PaymentFormModalComponent, UpiPaymentModalComponent],
+    imports: [CommonModule, FormsModule, LucideAngularModule],
     templateUrl: './checkout.component.html',
     styleUrls: ['./checkout.component.scss']
 })
@@ -43,6 +43,7 @@ export class CheckoutComponent implements OnInit {
     http = inject(HttpClient);
     orderService = inject(OrderService);
     paymentService = inject(PaymentService);
+    notificationService = inject(NotificationService);
 
     readonly CreditCard = CreditCard;
     readonly MapPin = MapPin;
@@ -62,12 +63,6 @@ export class CheckoutComponent implements OnInit {
     errorMessage = signal('');
     addresses = signal<AddressDto[]>([]);
     selectedAddressId: number | 'new' = 'new';
-    showPaymentModal = signal(false);
-    showUpiModal = signal(false);
-    currentOrderId = signal<number | null>(null);
-    currentOrderAmount = signal<number | null>(null);
-    paymentError = signal<string | null>(null);
-    upiError = signal<string | null>(null);
     isSubmitting = signal(false);
 
     ngOnInit(): void {
@@ -251,18 +246,12 @@ export class CheckoutComponent implements OnInit {
 
                     if (this.formData().paymentMethod === 'card') {
                         this.isLoading.set(false);
-                        this.currentOrderId.set(orderId);
-                        this.currentOrderAmount.set(orderAmount);
-                        this.showPaymentModal.set(true);
-                    } else if (this.formData().paymentMethod === 'upi') {
-                        this.isLoading.set(false);
-                        this.currentOrderId.set(orderId);
-                        this.currentOrderAmount.set(orderAmount);
-                        this.showUpiModal.set(true);
+                        this.openRazorpay(orderId, orderAmount);
                     } else {
                         this.isLoading.set(false);
                         this.isSubmitting.set(false);
                         this.cartService.clearCart();
+                        this.notificationService.success('Order Placed', 'Your order has been placed successfully!');
                         this.router.navigate(['/orders']);
                     }
                 },
@@ -275,100 +264,33 @@ export class CheckoutComponent implements OnInit {
             });
     }
 
-    onPaymentSubmitted(cardDetails: CardDetails): void {
-        const orderId = this.currentOrderId();
-        const amount = this.currentOrderAmount();
+    openRazorpay(orderId: number, amount: number): void {
         const user = this.authService.user();
+        if (!user) return;
 
-        if (!orderId || !amount) {
-            this.paymentError.set('Order information is missing. Please try again.');
-            return;
-        }
-
-        if (!user || !user.id) {
-            this.paymentError.set('User not authenticated. Please login again.');
-            return;
-        }
-
-        this.paymentError.set(null);
-
-        this.paymentService.processDummyPayment(orderId, user.id, amount, 'RAZORPAY')
-            .subscribe({
-                next: (response) => {
-                    if (response.success && response.data?.status === 'SUCCESS') {
-                        // Clear cart and close modal
-                        this.cartService.clearCart();
-                        this.showPaymentModal.set(false);
-                        this.paymentError.set(null);
-                        this.currentOrderId.set(null);
-                        this.currentOrderAmount.set(null);
+        // Simulate Razorpay payment
+        if (confirm(`Process payment of ₹${amount.toFixed(2)} for Order #${orderId}?`)) {
+            this.paymentService.processDummyPayment(orderId, user.id!, amount, 'RAZORPAY')
+                .subscribe({
+                    next: (response) => {
+                        if (response.success) {
+                            this.cartService.clearCart();
+                            this.isSubmitting.set(false);
+                            this.notificationService.success('Payment Successful', 'Your order has been placed successfully!');
+                            this.router.navigate(['/orders']);
+                        } else {
+                            this.errorMessage.set('Payment failed. Please try again.');
+                            this.isSubmitting.set(false);
+                        }
+                    },
+                    error: (err) => {
+                        this.errorMessage.set('Payment processing failed');
                         this.isSubmitting.set(false);
-                        
-                        // Redirect to My Orders
-                        this.router.navigate(['/orders']);
-                    } else {
-                        this.paymentError.set(response.data?.message || response.message || 'Payment failed');
                     }
-                },
-                error: (error) => {
-                    console.error('Payment processing failed:', error);
-                    this.paymentError.set(error.error?.message || 'Payment processing failed. Please try again.');
-                }
-            });
-    }
-
-    onUpiPaymentSubmitted(upiDetails: UpiDetails): void {
-        const orderId = this.currentOrderId();
-        const amount = this.currentOrderAmount();
-        const user = this.authService.user();
-
-        if (!orderId || !amount) {
-            this.upiError.set('Order information is missing. Please try again.');
-            return;
+                });
+        } else {
+            this.isSubmitting.set(false);
+            this.errorMessage.set('Payment cancelled');
         }
-
-        if (!user || !user.id) {
-            this.upiError.set('User not authenticated. Please login again.');
-            return;
-        }
-
-        this.upiError.set(null);
-
-        this.paymentService.processDummyPayment(orderId, user.id, amount, 'UPI', upiDetails.upiId)
-            .subscribe({
-                next: (response) => {
-                    if (response.success && response.data?.status === 'SUCCESS') {
-                        this.cartService.clearCart();
-                        this.showUpiModal.set(false);
-                        this.upiError.set(null);
-                        this.currentOrderId.set(null);
-                        this.currentOrderAmount.set(null);
-                        this.isSubmitting.set(false);
-                        this.router.navigate(['/orders']);
-                    } else {
-                        this.upiError.set(response.data?.message || response.message || 'Payment failed');
-                    }
-                },
-                error: (error) => {
-                    console.error('UPI payment failed:', error);
-                    this.upiError.set(error.error?.message || 'Payment processing failed. Please try again.');
-                }
-            });
-    }
-
-    onPaymentModalClosed(): void {
-        this.showPaymentModal.set(false);
-        this.currentOrderId.set(null);
-        this.currentOrderAmount.set(null);
-        this.paymentError.set(null);
-        this.isSubmitting.set(false);
-    }
-
-    onUpiModalClosed(): void {
-        this.showUpiModal.set(false);
-        this.currentOrderId.set(null);
-        this.currentOrderAmount.set(null);
-        this.upiError.set(null);
-        this.isSubmitting.set(false);
     }
 }

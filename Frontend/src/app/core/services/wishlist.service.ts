@@ -1,6 +1,7 @@
-import { Injectable, signal, computed, Inject, PLATFORM_ID } from '@angular/core';
+import { Injectable, signal, computed, Inject, PLATFORM_ID, inject } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { Product } from '../models/product.model';
+import { NotificationService } from './notification.service';
 
 @Injectable({
   providedIn: 'root'
@@ -10,6 +11,7 @@ export class WishlistService {
 
   items = this.itemsSignal.asReadonly();
   itemCount = computed(() => this.itemsSignal().length);
+  private notificationService = inject(NotificationService);
 
   constructor(@Inject(PLATFORM_ID) private platformId: Object) {
     this.loadFromStorage();
@@ -38,6 +40,7 @@ export class WishlistService {
     if (!this.isInWishlist(product.id)) {
       this.itemsSignal.update(items => [...items, product]);
       this.saveToStorage();
+      this.notificationService.success('Added to Wishlist', `${product.name} added to wishlist`);
     }
   }
 

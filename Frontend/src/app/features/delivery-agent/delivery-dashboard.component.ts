@@ -138,26 +138,70 @@ export class DeliveryDashboardComponent implements OnInit {
   }
 
   loadDeliveries(): void {
-    const userId = localStorage.getItem('userId') || '';
+    const userStr = localStorage.getItem('revcart_user');
+    let userId = '';
+    if (userStr) {
+      try {
+        const user = JSON.parse(userStr);
+        userId = user.id?.toString() || '';
+      } catch (e) {
+        console.error('Failed to parse user:', e);
+      }
+    }
     const headers = { 'X-User-Id': userId };
+
+    console.log('Loading deliveries for user:', userId);
 
     // Assigned
     this.http.get<ApiResponse<any[]>>(`${environment.apiUrl}/delivery/orders/assigned`, { headers })
-      .subscribe(resp => {
-        if (resp.success) this.assignedOrders = resp.data.map(this.mapBackendOrder);
-        this.calculateDelivered();
+      .subscribe({
+        next: resp => {
+          console.log('Assigned orders response:', resp);
+          if (resp.success && resp.data) {
+            this.assignedOrders = resp.data.map(this.mapBackendOrder);
+          } else {
+            this.assignedOrders = [];
+          }
+          this.calculateDelivered();
+        },
+        error: err => {
+          console.error('Failed to load assigned orders:', err);
+          this.assignedOrders = [];
+        }
       });
 
     // In transit
     this.http.get<ApiResponse<any[]>>(`${environment.apiUrl}/delivery/orders/in-transit`, { headers })
-      .subscribe(resp => {
-        if (resp.success) this.inTransitOrders = resp.data.map(this.mapBackendOrder);
+      .subscribe({
+        next: resp => {
+          console.log('In-transit orders response:', resp);
+          if (resp.success && resp.data) {
+            this.inTransitOrders = resp.data.map(this.mapBackendOrder);
+          } else {
+            this.inTransitOrders = [];
+          }
+        },
+        error: err => {
+          console.error('Failed to load in-transit orders:', err);
+          this.inTransitOrders = [];
+        }
       });
 
     // Pending
     this.http.get<ApiResponse<any[]>>(`${environment.apiUrl}/delivery/orders/pending`, { headers })
-      .subscribe(resp => {
-        if (resp.success) this.pendingOrders = resp.data.map(this.mapBackendOrder);
+      .subscribe({
+        next: resp => {
+          console.log('Pending orders response:', resp);
+          if (resp.success && resp.data) {
+            this.pendingOrders = resp.data.map(this.mapBackendOrder);
+          } else {
+            this.pendingOrders = [];
+          }
+        },
+        error: err => {
+          console.error('Failed to load pending orders:', err);
+          this.pendingOrders = [];
+        }
       });
   }
 

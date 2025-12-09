@@ -179,9 +179,8 @@ export class AuthService {
 
   verifyOtp(email: string, otp: string): Observable<void> {
     return this.httpClient
-      .post<ApiResponse<string>>(`${this.apiUrl}/verify-otp`, {
-        email,
-        otp
+      .post<ApiResponse<string>>(`${this.apiUrl}/verify-otp`, null, {
+        params: { email, otp }
       })
       .pipe((source) =>
         new Observable<void>((subscriber) => {

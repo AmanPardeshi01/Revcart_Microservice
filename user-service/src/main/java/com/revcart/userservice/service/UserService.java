@@ -169,4 +169,20 @@ public class UserService {
                 .map(this::toUserDto)
                 .collect(Collectors.toList());
     }
+
+    @Transactional
+    public UserDto updateUserRole(Long userId, String newRole) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        
+        try {
+            User.Role role = User.Role.valueOf(newRole);
+            user.setRole(role);
+            User updated = userRepository.save(user);
+            log.info("User role updated: {} -> {}", user.getEmail(), newRole);
+            return toUserDto(updated);
+        } catch (IllegalArgumentException e) {
+            throw new BadRequestException("Invalid role: " + newRole);
+        }
+    }
 }

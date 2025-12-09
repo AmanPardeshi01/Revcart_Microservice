@@ -1,0 +1,56 @@
+services:
+  # Frontend with live reload
+  frontend:
+    build:
+      context: ./Frontend
+      dockerfile: Dockerfile.dev
+    volumes:
+      - ./Frontend/src:/app/src
+      - ./Frontend/nginx.conf:/etc/nginx/nginx.conf
+    command: npm start
+
+  # Backend services with live reload
+  user-service:
+    volumes:
+      - ./user-service/src:/app/src
+      - ./user-service/target:/app/target
+
+  product-service:
+    volumes:
+      - ./product-service/src:/app/src
+      - ./product-service/target:/app/target
+
+  cart-service:
+    volumes:
+      - ./cart-service/src:/app/src
+      - ./cart-service/target:/app/target
+
+  order-service:
+    volumes:
+      - ./order-service/src:/app/src
+      - ./order-service/target:/app/target
+
+  payment-service:
+    volumes:
+      - ./payment-service/src:/app/src
+      - ./payment-service/target:/app/target
+
+  delivery-service:
+    volumes:
+      - ./delivery-service/src:/app/src
+      - ./delivery-service/target:/app/target
+
+  notification-service:
+    volumes:
+      - ./notification-service/src:/app/src
+      - ./notification-service/target:/app/target
+
+  analytics-service:
+    volumes:
+      - ./analytics-service/src:/app/src
+      - ./analytics-service/target:/app/target
+
+  revcart-gateway:
+    volumes:
+      - ./revcart-gateway/src:/app/src
+      - ./revcart-gateway/target:/app/target

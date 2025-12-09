@@ -78,4 +78,10 @@ public class UserController {
         List<UserDto> users = userService.getAllUsers();
         return ResponseEntity.ok(ApiResponse.success(users, "Users retrieved successfully"));
     }
+
+    @GetMapping("/count/active")
+    public ResponseEntity<java.util.Map<String, Long>> getActiveUsersCount() {
+        long count = userService.countActiveUsers();
+        return ResponseEntity.ok(java.util.Map.of("count", count, "data", count));
+    }
 }

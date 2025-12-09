@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { WishlistService } from '../../core/services/wishlist.service';
 import { CartService } from '../../core/services/cart.service';
+import { NotificationService } from '../../core/services/notification.service';
 import { LucideAngularModule, Heart, ShoppingCart, Trash2 } from 'lucide-angular';
 
 @Component({
@@ -15,6 +16,7 @@ import { LucideAngularModule, Heart, ShoppingCart, Trash2 } from 'lucide-angular
 export class WishlistComponent {
     wishlistService = inject(WishlistService);
     cartService = inject(CartService);
+    notificationService = inject(NotificationService);
 
     // Icons
     readonly Heart = Heart;
@@ -26,10 +28,13 @@ export class WishlistComponent {
         if (product) {
             this.cartService.addToCart(product);
             this.wishlistService.removeFromWishlist(productId);
+            this.notificationService.success('Added to Cart', `${product.name} moved to cart`);
         }
     }
 
     removeFromWishlist(productId: string): void {
+        const product = this.wishlistService.items().find(p => p.id === productId);
         this.wishlistService.removeFromWishlist(productId);
+        this.notificationService.success('Removed from Wishlist', product ? `${product.name} removed` : 'Item removed');
     }
 }

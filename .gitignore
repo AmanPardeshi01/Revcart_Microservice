@@ -98,3 +98,7 @@ docker-compose.override.yml
 .env
 .env.*
 temp/
+*.ps1
+*.bat
+*.md
+*.sql

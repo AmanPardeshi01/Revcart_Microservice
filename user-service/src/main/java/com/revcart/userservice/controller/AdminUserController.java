@@ -50,4 +50,13 @@ public class AdminUserController {
         List<UserDto> agents = userService.getDeliveryAgents();
         return ResponseEntity.ok(ApiResponse.success(agents, "Delivery agents retrieved successfully"));
     }
+
+    @PutMapping("/users/{id}/role")
+    public ResponseEntity<ApiResponse<UserDto>> updateUserRole(
+            @PathVariable Long id,
+            @RequestBody Map<String, String> request) {
+        String newRole = request.get("role");
+        UserDto updatedUser = userService.updateUserRole(id, newRole);
+        return ResponseEntity.ok(ApiResponse.success(updatedUser, "User role updated successfully"));
+    }
 }

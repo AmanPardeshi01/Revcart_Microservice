@@ -151,14 +151,28 @@ export class AdminDashboardComponent implements OnInit {
   }
 
   loadStats(): void {
+    // Fetch active users count from user service
+    this.http.get<any>(`${environment.apiUrl}/users/count/active`)
+      .subscribe({
+        next: (response) => {
+          const count = response.data || response.count || 0;
+          this.stats.activeUsers = count;
+          console.log('Active users count:', count);
+        },
+        error: err => console.error('Active users count error:', err)
+      });
+
     this.http.get<any>(`${environment.apiUrl}/admin/dashboard/stats`)
       .subscribe({
         next: (response) => {
           if (response.success && response.data) {
-            this.stats.totalOrders = response.data.totalOrders;
-            this.stats.totalRevenue = response.data.totalRevenue;
-            this.stats.totalProducts = response.data.totalProducts;
-            this.stats.activeUsers = response.data.activeUsers;
+            this.stats.totalOrders = response.data.totalOrders || 0;
+            this.stats.totalRevenue = response.data.totalRevenue || 0;
+            this.stats.totalProducts = response.data.totalProducts || 0;
+            // Don't override activeUsers if already set
+            if (!this.stats.activeUsers && response.data.activeUsers) {
+              this.stats.activeUsers = response.data.activeUsers;
+            }
           }
         },
         error: err => console.error('Dashboard stats error:', err)

@@ -241,8 +241,8 @@ public class OrderService {
         
         order.setStatus(status);
         
-        // Auto-assign delivery agent when status changes to OUT_FOR_DELIVERY
-        if (status == Order.OrderStatus.OUT_FOR_DELIVERY && order.getDeliveryAgentId() == null) {
+        // Auto-assign delivery agent when status changes to PACKED or OUT_FOR_DELIVERY
+        if ((status == Order.OrderStatus.PACKED || status == Order.OrderStatus.OUT_FOR_DELIVERY) && order.getDeliveryAgentId() == null) {
             try {
                 ApiResponse<java.util.List<Object>> agentsResponse = userServiceClient.getDeliveryAgents();
                 if (agentsResponse.isSuccess() && agentsResponse.getData() != null && !agentsResponse.getData().isEmpty()) {

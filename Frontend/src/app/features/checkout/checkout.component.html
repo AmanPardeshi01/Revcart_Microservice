@@ -71,12 +71,7 @@
                     <label class="flex items-center gap-3 p-4 border rounded-md cursor-pointer hover:bg-gray-50">
                         <input type="radio" [(ngModel)]="formData().paymentMethod" name="paymentMethod" value="card"
                             class="w-4 h-4" />
-                        <span>Credit/Debit Card</span>
-                    </label>
-                    <label class="flex items-center gap-3 p-4 border rounded-md cursor-pointer hover:bg-gray-50">
-                        <input type="radio" [(ngModel)]="formData().paymentMethod" name="paymentMethod" value="upi"
-                            class="w-4 h-4" />
-                        <span>UPI</span>
+                        <span>Credit/Debit Card (Razorpay)</span>
                     </label>
                     <label class="flex items-center gap-3 p-4 border rounded-md cursor-pointer hover:bg-gray-50">
                         <input type="radio" [(ngModel)]="formData().paymentMethod" name="paymentMethod" value="cod"
@@ -130,21 +125,4 @@
         </div>
     </form>
 
-    <!-- Payment Form Modal -->
-    <app-payment-form-modal
-        [isOpen]="showPaymentModal()"
-        [orderId]="currentOrderId()"
-        [amount]="currentOrderAmount()"
-        [externalError]="paymentError()"
-        (paymentSubmitted)="onPaymentSubmitted($event)"
-        (modalClosed)="onPaymentModalClosed()">
-    </app-payment-form-modal>
-
-    <!-- UPI Payment Modal -->
-    <app-upi-payment-modal
-        [isOpen]="showUpiModal()"
-        [externalError]="upiError()"
-        (paymentSubmitted)="onUpiPaymentSubmitted($event)"
-        (modalClosed)="onUpiModalClosed()">
-    </app-upi-payment-modal>
 </div>

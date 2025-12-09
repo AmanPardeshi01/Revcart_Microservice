@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { CartService } from '../../core/services/cart.service';
 import { StockService, StockValidationResult } from '../../core/services/stock.service';
+import { NotificationService } from '../../core/services/notification.service';
 import { LucideAngularModule, ShoppingBag, Trash2, Plus, Minus, AlertCircle, RefreshCw } from 'lucide-angular';
 
 @Component({
@@ -15,6 +16,7 @@ import { LucideAngularModule, ShoppingBag, Trash2, Plus, Minus, AlertCircle, Ref
 export class CartComponent implements OnInit {
     cartService = inject(CartService);
     stockService = inject(StockService);
+    notificationService = inject(NotificationService);
 
     // Icons
     readonly ShoppingBag = ShoppingBag;
@@ -86,16 +88,19 @@ export class CartComponent implements OnInit {
 
     increaseQuantity(productId: string, currentQuantity: number): void {
         this.cartService.updateQuantity(productId, currentQuantity + 1);
+        this.notificationService.success('Cart Updated', 'Item quantity increased');
     }
 
     decreaseQuantity(productId: string, currentQuantity: number): void {
         if (currentQuantity > 1) {
             this.cartService.updateQuantity(productId, currentQuantity - 1);
+            this.notificationService.success('Cart Updated', 'Item quantity decreased');
         }
     }
 
     removeItem(productId: string): void {
         this.cartService.removeFromCart(productId);
+        this.notificationService.success('Item Removed', 'Item removed from cart');
     }
 
     /**
