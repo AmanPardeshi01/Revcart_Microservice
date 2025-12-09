@@ -1,0 +1,254 @@
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: revcart-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./init-db:/docker-entrypoint-initdb.d
+    networks:
+      - revcart-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 20s
+      retries: 10
+    restart: always
+
+  redis:
+    image: redis:7-alpine
+    container_name: revcart-redis
+    ports:
+      - "6379:6379"
+    networks:
+      - revcart-network
+    restart: always
+
+  user-service:
+    image: ${DOCKER_REGISTRY}/revcart-user-service:latest
+    container_name: user-service
+    ports:
+      - "8081:8081"
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/${MYSQL_DATABASE}
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=${MYSQL_ROOT_PASSWORD}
+      - SPRING_REDIS_HOST=redis
+      - SPRING_REDIS_PORT=6379
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - revcart-network
+    restart: always
+
+  product-service:
+    image: ${DOCKER_REGISTRY}/revcart-product-service:latest
+    container_name: product-service
+    ports:
+      - "8082:8082"
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/${MYSQL_DATABASE}
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=${MYSQL_ROOT_PASSWORD}
+      - SPRING_REDIS_HOST=redis
+      - SPRING_REDIS_PORT=6379
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - revcart-network
+    restart: always
+
+  cart-service:
+    image: ${DOCKER_REGISTRY}/revcart-cart-service:latest
+    container_name: cart-service
+    ports:
+      - "8083:8083"
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/${MYSQL_DATABASE}
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=${MYSQL_ROOT_PASSWORD}
+      - SPRING_REDIS_HOST=redis
+      - SPRING_REDIS_PORT=6379
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - revcart-network
+    restart: always
+
+  order-service:
+    image: ${DOCKER_REGISTRY}/revcart-order-service:latest
+    container_name: order-service
+    ports:
+      - "8084:8084"
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/${MYSQL_DATABASE}
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=${MYSQL_ROOT_PASSWORD}
+      - SPRING_REDIS_HOST=redis
+      - SPRING_REDIS_PORT=6379
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - revcart-network
+    restart: always
+
+  payment-service:
+    image: ${DOCKER_REGISTRY}/revcart-payment-service:latest
+    container_name: payment-service
+    ports:
+      - "8085:8085"
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/${MYSQL_DATABASE}
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=${MYSQL_ROOT_PASSWORD}
+      - SPRING_REDIS_HOST=redis
+      - SPRING_REDIS_PORT=6379
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - revcart-network
+    restart: always
+
+  delivery-service:
+    image: ${DOCKER_REGISTRY}/revcart-delivery-service:latest
+    container_name: delivery-service
+    ports:
+      - "8086:8086"
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/${MYSQL_DATABASE}
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=${MYSQL_ROOT_PASSWORD}
+      - SPRING_REDIS_HOST=redis
+      - SPRING_REDIS_PORT=6379
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - revcart-network
+    restart: always
+
+  notification-service:
+    image: ${DOCKER_REGISTRY}/revcart-notification-service:latest
+    container_name: notification-service
+    ports:
+      - "8087:8087"
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/${MYSQL_DATABASE}
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=${MYSQL_ROOT_PASSWORD}
+      - SPRING_REDIS_HOST=redis
+      - SPRING_REDIS_PORT=6379
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - revcart-network
+    restart: always
+
+  analytics-service:
+    image: ${DOCKER_REGISTRY}/revcart-analytics-service:latest
+    container_name: analytics-service
+    ports:
+      - "8088:8088"
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/${MYSQL_DATABASE}
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=${MYSQL_ROOT_PASSWORD}
+      - SPRING_REDIS_HOST=redis
+      - SPRING_REDIS_PORT=6379
+      - SERVICES_ORDER-SERVICE_URL=http://order-service:8084
+      - SERVICES_PRODUCT-SERVICE_URL=http://product-service:8082
+      - SERVICES_USER-SERVICE_URL=http://user-service:8081
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - revcart-network
+    restart: always
+
+  revcart-gateway:
+    image: ${DOCKER_REGISTRY}/revcart-gateway:latest
+    container_name: revcart-gateway
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_CLOUD_GATEWAY_ROUTES[0]_ID=user-service
+      - SPRING_CLOUD_GATEWAY_ROUTES[0]_URI=http://user-service:8081
+      - SPRING_CLOUD_GATEWAY_ROUTES[0]_PREDICATES[0]=Path=/api/users/**
+      - SPRING_CLOUD_GATEWAY_ROUTES[13]_ID=admin-users
+      - SPRING_CLOUD_GATEWAY_ROUTES[13]_URI=http://user-service:8081
+      - SPRING_CLOUD_GATEWAY_ROUTES[13]_PREDICATES[0]=Path=/api/admin/**
+      - SPRING_CLOUD_GATEWAY_ROUTES[1]_ID=profile-service
+      - SPRING_CLOUD_GATEWAY_ROUTES[1]_URI=http://user-service:8081
+      - SPRING_CLOUD_GATEWAY_ROUTES[1]_PREDICATES[0]=Path=/api/profile/**
+      - SPRING_CLOUD_GATEWAY_ROUTES[2]_ID=product-service
+      - SPRING_CLOUD_GATEWAY_ROUTES[2]_URI=http://product-service:8082
+      - SPRING_CLOUD_GATEWAY_ROUTES[2]_PREDICATES[0]=Path=/api/products/**
+      - SPRING_CLOUD_GATEWAY_ROUTES[3]_ID=cart-service
+      - SPRING_CLOUD_GATEWAY_ROUTES[3]_URI=http://cart-service:8083
+      - SPRING_CLOUD_GATEWAY_ROUTES[3]_PREDICATES[0]=Path=/api/cart/**
+      - SPRING_CLOUD_GATEWAY_ROUTES[4]_ID=category-service
+      - SPRING_CLOUD_GATEWAY_ROUTES[4]_URI=http://product-service:8082
+      - SPRING_CLOUD_GATEWAY_ROUTES[4]_PREDICATES[0]=Path=/api/categories/**
+      - SPRING_CLOUD_GATEWAY_ROUTES[5]_ID=order-service
+      - SPRING_CLOUD_GATEWAY_ROUTES[5]_URI=http://order-service:8084
+      - SPRING_CLOUD_GATEWAY_ROUTES[5]_PREDICATES[0]=Path=/api/orders/**
+      - SPRING_CLOUD_GATEWAY_ROUTES[6]_ID=admin-orders
+      - SPRING_CLOUD_GATEWAY_ROUTES[6]_URI=http://order-service:8084
+      - SPRING_CLOUD_GATEWAY_ROUTES[6]_PREDICATES[0]=Path=/api/admin/orders/**
+      - SPRING_CLOUD_GATEWAY_ROUTES[7]_ID=admin-dashboard
+      - SPRING_CLOUD_GATEWAY_ROUTES[7]_URI=http://order-service:8084
+      - SPRING_CLOUD_GATEWAY_ROUTES[7]_PREDICATES[0]=Path=/api/admin/dashboard/**
+      - SPRING_CLOUD_GATEWAY_ROUTES[8]_ID=payment-service
+      - SPRING_CLOUD_GATEWAY_ROUTES[8]_URI=http://payment-service:8085
+      - SPRING_CLOUD_GATEWAY_ROUTES[8]_PREDICATES[0]=Path=/api/payments/**
+      - SPRING_CLOUD_GATEWAY_ROUTES[9]_ID=notification-service
+      - SPRING_CLOUD_GATEWAY_ROUTES[9]_URI=http://notification-service:8087
+      - SPRING_CLOUD_GATEWAY_ROUTES[9]_PREDICATES[0]=Path=/api/notifications/**
+      - SPRING_CLOUD_GATEWAY_ROUTES[10]_ID=delivery-service
+      - SPRING_CLOUD_GATEWAY_ROUTES[10]_URI=http://delivery-service:8086
+      - SPRING_CLOUD_GATEWAY_ROUTES[10]_PREDICATES[0]=Path=/api/delivery/**
+      - SPRING_CLOUD_GATEWAY_ROUTES[11]_ID=analytics-service
+      - SPRING_CLOUD_GATEWAY_ROUTES[11]_URI=http://analytics-service:8088
+      - SPRING_CLOUD_GATEWAY_ROUTES[11]_PREDICATES[0]=Path=/api/analytics/**
+      - SPRING_CLOUD_GATEWAY_ROUTES[12]_ID=websocket-service
+      - SPRING_CLOUD_GATEWAY_ROUTES[12]_URI=http://notification-service:8087
+      - SPRING_CLOUD_GATEWAY_ROUTES[12]_PREDICATES[0]=Path=/ws/**
+    depends_on:
+      - user-service
+      - product-service
+      - cart-service
+      - order-service
+      - payment-service
+      - delivery-service
+      - notification-service
+      - analytics-service
+    networks:
+      - revcart-network
+    restart: always
+
+  frontend:
+    image: ${DOCKER_REGISTRY}/revcart-frontend:latest
+    container_name: revcart-frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - revcart-gateway
+    networks:
+      - revcart-network
+    restart: always
+
+volumes:
+  mysql_data:
+
+networks:
+  revcart-network:
+    driver: bridge
