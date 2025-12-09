@@ -1,19 +1,17 @@
 pipeline {
     agent any
-    
+
     environment {
-        DOCKER_REGISTRY = 'your-dockerhub-username'
-        EC2_HOST = 'your-ec2-public-ip'
-        EC2_USER = 'ec2-user'
+        DOCKER_REGISTRY = 'amanpardeshi01'
     }
-    
+
     stages {
         stage('Checkout') {
             steps {
-                git branch: 'main', url: 'https://github.com/your-username/RevCart_Microservice.git'
+                git branch: 'main', url: 'https://github.com/amanpardeshi01/RevCart_Microservice.git'
             }
         }
-        
+
         stage('Test & Build Services') {
             parallel {
                 stage('User Service') {
@@ -88,7 +86,7 @@ pipeline {
                 }
             }
         }
-        
+
         stage('Build Docker Images') {
             steps {
                 script {
@@ -103,7 +101,7 @@ pipeline {
                         docker build -t ${DOCKER_REGISTRY}/revcart-analytics-service:${BUILD_NUMBER} ./analytics-service
                         docker build -t ${DOCKER_REGISTRY}/revcart-gateway:${BUILD_NUMBER} ./revcart-gateway
                         docker build -t ${DOCKER_REGISTRY}/revcart-frontend:${BUILD_NUMBER} ./Frontend
-                        
+
                         docker tag ${DOCKER_REGISTRY}/revcart-user-service:${BUILD_NUMBER} ${DOCKER_REGISTRY}/revcart-user-service:latest
                         docker tag ${DOCKER_REGISTRY}/revcart-product-service:${BUILD_NUMBER} ${DOCKER_REGISTRY}/revcart-product-service:latest
                         docker tag ${DOCKER_REGISTRY}/revcart-cart-service:${BUILD_NUMBER} ${DOCKER_REGISTRY}/revcart-cart-service:latest
@@ -118,7 +116,7 @@ pipeline {
                 }
             }
         }
-        
+
         stage('Push to Docker Hub') {
             steps {
                 script {
@@ -150,20 +148,10 @@ pipeline {
                 }
             }
         }
-        
-        stage('Deploy to EC2') {
-            steps {
-                script {
-                    withCredentials([sshUserPrivateKey(credentialsId: 'ec2-ssh-key', keyFileVariable: 'SSH_KEY')]) {
-                        bat """
-                            ssh -i %SSH_KEY% -o StrictHostKeyChecking=no %EC2_USER%@%EC2_HOST% "cd /home/ec2-user/revcart && docker-compose -f docker-compose.prod.yml pull && docker-compose -f docker-compose.prod.yml down && docker-compose -f docker-compose.prod.yml up -d"
-                        """
-                    }
-                }
-            }
-        }
+
+
     }
-    
+
     post {
         always {
             cleanWs()
