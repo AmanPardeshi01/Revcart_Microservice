@@ -33,11 +33,22 @@ services:
     ports:
       - "8081:8081"
     environment:
+      - SERVER_PORT=8081
       - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/${MYSQL_DATABASE}
       - SPRING_DATASOURCE_USERNAME=root
       - SPRING_DATASOURCE_PASSWORD=${MYSQL_ROOT_PASSWORD}
+      - SPRING_JPA_HIBERNATE_DDL-AUTO=update
       - SPRING_REDIS_HOST=redis
       - SPRING_REDIS_PORT=6379
+      - SPRING_MAIL_HOST=smtp.gmail.com
+      - SPRING_MAIL_PORT=587
+      - SPRING_MAIL_USERNAME=admin@gmail.com
+      - SPRING_MAIL_PASSWORD=admin@1234
+      - SPRING_MAIL_PROPERTIES_MAIL_SMTP_AUTH=true
+      - SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE=true
+      - JWT_SECRET=${JWT_SECRET}
+      - JWT_EXPIRATION=${JWT_EXPIRATION}
+      - SPRING_SECURITY_CSRF_ENABLED=false
     depends_on:
       mysql:
         condition: service_healthy
@@ -51,9 +62,11 @@ services:
     ports:
       - "8082:8082"
     environment:
+      - SERVER_PORT=8082
       - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/${MYSQL_DATABASE}
       - SPRING_DATASOURCE_USERNAME=root
       - SPRING_DATASOURCE_PASSWORD=${MYSQL_ROOT_PASSWORD}
+      - SPRING_JPA_HIBERNATE_DDL-AUTO=update
       - SPRING_REDIS_HOST=redis
       - SPRING_REDIS_PORT=6379
     depends_on:
@@ -69,9 +82,11 @@ services:
     ports:
       - "8083:8083"
     environment:
+      - SERVER_PORT=8083
       - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/${MYSQL_DATABASE}
       - SPRING_DATASOURCE_USERNAME=root
       - SPRING_DATASOURCE_PASSWORD=${MYSQL_ROOT_PASSWORD}
+      - SPRING_JPA_HIBERNATE_DDL-AUTO=update
       - SPRING_REDIS_HOST=redis
       - SPRING_REDIS_PORT=6379
     depends_on:
@@ -87,9 +102,11 @@ services:
     ports:
       - "8084:8084"
     environment:
+      - SERVER_PORT=8084
       - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/${MYSQL_DATABASE}
       - SPRING_DATASOURCE_USERNAME=root
       - SPRING_DATASOURCE_PASSWORD=${MYSQL_ROOT_PASSWORD}
+      - SPRING_JPA_HIBERNATE_DDL-AUTO=update
       - SPRING_REDIS_HOST=redis
       - SPRING_REDIS_PORT=6379
     depends_on:
@@ -105,9 +122,11 @@ services:
     ports:
       - "8085:8085"
     environment:
+      - SERVER_PORT=8085
       - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/${MYSQL_DATABASE}
       - SPRING_DATASOURCE_USERNAME=root
       - SPRING_DATASOURCE_PASSWORD=${MYSQL_ROOT_PASSWORD}
+      - SPRING_JPA_HIBERNATE_DDL-AUTO=update
       - SPRING_REDIS_HOST=redis
       - SPRING_REDIS_PORT=6379
     depends_on:
@@ -123,9 +142,11 @@ services:
     ports:
       - "8086:8086"
     environment:
+      - SERVER_PORT=8086
       - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/${MYSQL_DATABASE}
       - SPRING_DATASOURCE_USERNAME=root
       - SPRING_DATASOURCE_PASSWORD=${MYSQL_ROOT_PASSWORD}
+      - SPRING_JPA_HIBERNATE_DDL-AUTO=update
       - SPRING_REDIS_HOST=redis
       - SPRING_REDIS_PORT=6379
     depends_on:
@@ -141,9 +162,11 @@ services:
     ports:
       - "8087:8087"
     environment:
+      - SERVER_PORT=8087
       - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/${MYSQL_DATABASE}
       - SPRING_DATASOURCE_USERNAME=root
       - SPRING_DATASOURCE_PASSWORD=${MYSQL_ROOT_PASSWORD}
+      - SPRING_JPA_HIBERNATE_DDL-AUTO=update
       - SPRING_REDIS_HOST=redis
       - SPRING_REDIS_PORT=6379
     depends_on:
@@ -159,9 +182,11 @@ services:
     ports:
       - "8088:8088"
     environment:
+      - SERVER_PORT=8088
       - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/${MYSQL_DATABASE}
       - SPRING_DATASOURCE_USERNAME=root
       - SPRING_DATASOURCE_PASSWORD=${MYSQL_ROOT_PASSWORD}
+      - SPRING_JPA_HIBERNATE_DDL-AUTO=update
       - SPRING_REDIS_HOST=redis
       - SPRING_REDIS_PORT=6379
       - SERVICES_ORDER-SERVICE_URL=http://order-service:8084
@@ -183,54 +208,19 @@ services:
       - SPRING_CLOUD_GATEWAY_ROUTES[0]_ID=user-service
       - SPRING_CLOUD_GATEWAY_ROUTES[0]_URI=http://user-service:8081
       - SPRING_CLOUD_GATEWAY_ROUTES[0]_PREDICATES[0]=Path=/api/users/**
-      - SPRING_CLOUD_GATEWAY_ROUTES[13]_ID=admin-users
-      - SPRING_CLOUD_GATEWAY_ROUTES[13]_URI=http://user-service:8081
-      - SPRING_CLOUD_GATEWAY_ROUTES[13]_PREDICATES[0]=Path=/api/admin/**
-      - SPRING_CLOUD_GATEWAY_ROUTES[1]_ID=profile-service
-      - SPRING_CLOUD_GATEWAY_ROUTES[1]_URI=http://user-service:8081
-      - SPRING_CLOUD_GATEWAY_ROUTES[1]_PREDICATES[0]=Path=/api/profile/**
-      - SPRING_CLOUD_GATEWAY_ROUTES[2]_ID=product-service
+      - SPRING_CLOUD_GATEWAY_ROUTES[1]_ID=product-service
+      - SPRING_CLOUD_GATEWAY_ROUTES[1]_URI=http://product-service:8082
+      - SPRING_CLOUD_GATEWAY_ROUTES[1]_PREDICATES[0]=Path=/api/products/**
+      - SPRING_CLOUD_GATEWAY_ROUTES[2]_ID=category-service
       - SPRING_CLOUD_GATEWAY_ROUTES[2]_URI=http://product-service:8082
-      - SPRING_CLOUD_GATEWAY_ROUTES[2]_PREDICATES[0]=Path=/api/products/**
-      - SPRING_CLOUD_GATEWAY_ROUTES[3]_ID=cart-service
-      - SPRING_CLOUD_GATEWAY_ROUTES[3]_URI=http://cart-service:8083
-      - SPRING_CLOUD_GATEWAY_ROUTES[3]_PREDICATES[0]=Path=/api/cart/**
-      - SPRING_CLOUD_GATEWAY_ROUTES[4]_ID=category-service
-      - SPRING_CLOUD_GATEWAY_ROUTES[4]_URI=http://product-service:8082
-      - SPRING_CLOUD_GATEWAY_ROUTES[4]_PREDICATES[0]=Path=/api/categories/**
-      - SPRING_CLOUD_GATEWAY_ROUTES[5]_ID=order-service
-      - SPRING_CLOUD_GATEWAY_ROUTES[5]_URI=http://order-service:8084
-      - SPRING_CLOUD_GATEWAY_ROUTES[5]_PREDICATES[0]=Path=/api/orders/**
-      - SPRING_CLOUD_GATEWAY_ROUTES[6]_ID=admin-orders
-      - SPRING_CLOUD_GATEWAY_ROUTES[6]_URI=http://order-service:8084
-      - SPRING_CLOUD_GATEWAY_ROUTES[6]_PREDICATES[0]=Path=/api/admin/orders/**
-      - SPRING_CLOUD_GATEWAY_ROUTES[7]_ID=admin-dashboard
-      - SPRING_CLOUD_GATEWAY_ROUTES[7]_URI=http://order-service:8084
-      - SPRING_CLOUD_GATEWAY_ROUTES[7]_PREDICATES[0]=Path=/api/admin/dashboard/**
-      - SPRING_CLOUD_GATEWAY_ROUTES[8]_ID=payment-service
-      - SPRING_CLOUD_GATEWAY_ROUTES[8]_URI=http://payment-service:8085
-      - SPRING_CLOUD_GATEWAY_ROUTES[8]_PREDICATES[0]=Path=/api/payments/**
-      - SPRING_CLOUD_GATEWAY_ROUTES[9]_ID=notification-service
-      - SPRING_CLOUD_GATEWAY_ROUTES[9]_URI=http://notification-service:8087
-      - SPRING_CLOUD_GATEWAY_ROUTES[9]_PREDICATES[0]=Path=/api/notifications/**
-      - SPRING_CLOUD_GATEWAY_ROUTES[10]_ID=delivery-service
-      - SPRING_CLOUD_GATEWAY_ROUTES[10]_URI=http://delivery-service:8086
-      - SPRING_CLOUD_GATEWAY_ROUTES[10]_PREDICATES[0]=Path=/api/delivery/**
-      - SPRING_CLOUD_GATEWAY_ROUTES[11]_ID=analytics-service
-      - SPRING_CLOUD_GATEWAY_ROUTES[11]_URI=http://analytics-service:8088
-      - SPRING_CLOUD_GATEWAY_ROUTES[11]_PREDICATES[0]=Path=/api/analytics/**
-      - SPRING_CLOUD_GATEWAY_ROUTES[12]_ID=websocket-service
-      - SPRING_CLOUD_GATEWAY_ROUTES[12]_URI=http://notification-service:8087
-      - SPRING_CLOUD_GATEWAY_ROUTES[12]_PREDICATES[0]=Path=/ws/**
+      - SPRING_CLOUD_GATEWAY_ROUTES[2]_PREDICATES[0]=Path=/api/categories/**
+      - SPRING_CLOUD_GATEWAY_GLOBALCORS_CORSCONFIGURATIONS_[/**]_ALLOWEDORIGINS=*
+      - SPRING_CLOUD_GATEWAY_GLOBALCORS_CORSCONFIGURATIONS_[/**]_ALLOWEDMETHODS=*
+      - SPRING_CLOUD_GATEWAY_GLOBALCORS_CORSCONFIGURATIONS_[/**]_ALLOWEDHEADERS=*
+      - SPRING_CLOUD_GATEWAY_GLOBALCORS_CORSCONFIGURATIONS_[/**]_ALLOWCREDENTIALS=true
     depends_on:
       - user-service
       - product-service
-      - cart-service
-      - order-service
-      - payment-service
-      - delivery-service
-      - notification-service
-      - analytics-service
     networks:
       - revcart-network
     restart: always

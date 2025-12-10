@@ -124,6 +124,7 @@ export class AuthService {
         email: data.email,
         password: data.password,
         name: data.name,
+        username: data.email, // Use email as username
         phone: data.phone || ''
       })
       .pipe(
