@@ -125,7 +125,8 @@ export class AuthService {
         password: data.password,
         name: data.name,
         username: data.email, // Use email as username
-        phone: data.phone || ''
+        phone: data.phone || '',
+        role: data.role
       })
       .pipe(
         (source) =>

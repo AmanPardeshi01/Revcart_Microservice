@@ -45,7 +45,8 @@ public class AnalyticsService {
 
     public OrderAnalyticsDto computeOrderAnalytics() {
         try {
-            List<Map<String, Object>> orders = orderServiceClient.getAllOrders();
+            ApiResponse<List<Map<String, Object>>> response = orderServiceClient.getAllOrders();
+            List<Map<String, Object>> orders = response.getData();
             
             long totalOrders = orders.size();
             double totalRevenue = orders.stream()

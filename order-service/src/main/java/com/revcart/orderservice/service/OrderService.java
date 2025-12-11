@@ -514,4 +514,16 @@ public class OrderService {
                 .map(this::toDto)
                 .collect(Collectors.toList());
     }
+
+    @Transactional
+    public OrderDto assignDeliveryAgent(Long orderId, Long deliveryAgentId) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new ResourceNotFoundException("Order not found"));
+        
+        order.setDeliveryAgentId(deliveryAgentId);
+        Order updated = orderRepository.save(order);
+        
+        log.info("Delivery agent {} assigned to order {}", deliveryAgentId, orderId);
+        return toDto(updated);
+    }
 }

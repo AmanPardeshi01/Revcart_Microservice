@@ -13,19 +13,42 @@ services:
     networks:
       - revcart-network
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD}"]
       timeout: 20s
       retries: 10
-    restart: always
+      interval: 30s
+      start_period: 60s
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '0.5'
+        reservations:
+          memory: 512M
+          cpus: '0.25'
 
   redis:
     image: redis:7-alpine
     container_name: revcart-redis
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD}
     ports:
       - "6379:6379"
+    volumes:
+      - redis_data:/data
     networks:
       - revcart-network
-    restart: always
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      timeout: 30s
+      retries: 10
+      interval: 30s
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.25'
 
   user-service:
     image: ${DOCKER_REGISTRY}/revcart-user-service:latest
@@ -33,28 +56,49 @@ services:
     ports:
       - "8081:8081"
     environment:
+      - SPRING_PROFILES_ACTIVE=prod
       - SERVER_PORT=8081
-      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/${MYSQL_DATABASE}
-      - SPRING_DATASOURCE_USERNAME=root
-      - SPRING_DATASOURCE_PASSWORD=${MYSQL_ROOT_PASSWORD}
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/${MYSQL_DATABASE}?useSSL=true&requireSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      - SPRING_DATASOURCE_USERNAME=${MYSQL_USER}
+      - SPRING_DATASOURCE_PASSWORD=${MYSQL_PASSWORD}
       - SPRING_JPA_HIBERNATE_DDL-AUTO=update
+      - SPRING_JPA_SHOW_SQL=false
       - SPRING_REDIS_HOST=redis
       - SPRING_REDIS_PORT=6379
-      - SPRING_MAIL_HOST=smtp.gmail.com
-      - SPRING_MAIL_PORT=587
-      - SPRING_MAIL_USERNAME=admin@gmail.com
-      - SPRING_MAIL_PASSWORD=admin@1234
+      - SPRING_REDIS_PASSWORD=${REDIS_PASSWORD}
+      - SPRING_MAIL_HOST=${MAIL_HOST}
+      - SPRING_MAIL_PORT=${MAIL_PORT}
+      - SPRING_MAIL_USERNAME=${MAIL_USERNAME}
+      - SPRING_MAIL_PASSWORD=${MAIL_PASSWORD}
       - SPRING_MAIL_PROPERTIES_MAIL_SMTP_AUTH=true
       - SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE=true
       - JWT_SECRET=${JWT_SECRET}
       - JWT_EXPIRATION=${JWT_EXPIRATION}
       - SPRING_SECURITY_CSRF_ENABLED=false
+      - LOGGING_LEVEL_ROOT=WARN
+      - LOGGING_LEVEL_COM_REVCART=INFO
     depends_on:
       mysql:
         condition: service_healthy
+      redis:
+        condition: service_healthy
     networks:
       - revcart-network
-    restart: always
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081/actuator/health"]
+      timeout: 10s
+      retries: 5
+      interval: 30s
+      start_period: 60s
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 768M
+          cpus: '0.5'
+        reservations:
+          memory: 512M
+          cpus: '0.25'
 
   product-service:
     image: ${DOCKER_REGISTRY}/revcart-product-service:latest
@@ -62,19 +106,40 @@ services:
     ports:
       - "8082:8082"
     environment:
+      - SPRING_PROFILES_ACTIVE=prod
       - SERVER_PORT=8082
-      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/${MYSQL_DATABASE}
-      - SPRING_DATASOURCE_USERNAME=root
-      - SPRING_DATASOURCE_PASSWORD=${MYSQL_ROOT_PASSWORD}
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/${MYSQL_DATABASE}?useSSL=true&requireSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      - SPRING_DATASOURCE_USERNAME=${MYSQL_USER}
+      - SPRING_DATASOURCE_PASSWORD=${MYSQL_PASSWORD}
       - SPRING_JPA_HIBERNATE_DDL-AUTO=update
+      - SPRING_JPA_SHOW_SQL=false
       - SPRING_REDIS_HOST=redis
       - SPRING_REDIS_PORT=6379
+      - SPRING_REDIS_PASSWORD=${REDIS_PASSWORD}
+      - LOGGING_LEVEL_ROOT=WARN
+      - LOGGING_LEVEL_COM_REVCART=INFO
     depends_on:
       mysql:
         condition: service_healthy
+      redis:
+        condition: service_healthy
     networks:
       - revcart-network
-    restart: always
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8082/actuator/health"]
+      timeout: 10s
+      retries: 5
+      interval: 30s
+      start_period: 60s
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 768M
+          cpus: '0.5'
+        reservations:
+          memory: 512M
+          cpus: '0.25'
 
   cart-service:
     image: ${DOCKER_REGISTRY}/revcart-cart-service:latest
@@ -82,19 +147,42 @@ services:
     ports:
       - "8083:8083"
     environment:
+      - SPRING_PROFILES_ACTIVE=prod
       - SERVER_PORT=8083
-      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/${MYSQL_DATABASE}
-      - SPRING_DATASOURCE_USERNAME=root
-      - SPRING_DATASOURCE_PASSWORD=${MYSQL_ROOT_PASSWORD}
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/${MYSQL_DATABASE}?useSSL=true&requireSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      - SPRING_DATASOURCE_USERNAME=${MYSQL_USER}
+      - SPRING_DATASOURCE_PASSWORD=${MYSQL_PASSWORD}
       - SPRING_JPA_HIBERNATE_DDL-AUTO=update
+      - SPRING_JPA_SHOW_SQL=false
       - SPRING_REDIS_HOST=redis
       - SPRING_REDIS_PORT=6379
+      - SPRING_REDIS_PASSWORD=${REDIS_PASSWORD}
+      - SERVICES_PRODUCT-SERVICE_URL=http://revcart-gateway:8080
+      - SERVICES_USER-SERVICE_URL=http://revcart-gateway:8080
+      - LOGGING_LEVEL_ROOT=WARN
+      - LOGGING_LEVEL_COM_REVCART=INFO
     depends_on:
       mysql:
         condition: service_healthy
+      redis:
+        condition: service_healthy
     networks:
       - revcart-network
-    restart: always
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8083/actuator/health"]
+      timeout: 10s
+      retries: 5
+      interval: 30s
+      start_period: 60s
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 768M
+          cpus: '0.5'
+        reservations:
+          memory: 512M
+          cpus: '0.25'
 
   order-service:
     image: ${DOCKER_REGISTRY}/revcart-order-service:latest
@@ -102,19 +190,56 @@ services:
     ports:
       - "8084:8084"
     environment:
+      - SPRING_PROFILES_ACTIVE=prod
       - SERVER_PORT=8084
-      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/${MYSQL_DATABASE}
-      - SPRING_DATASOURCE_USERNAME=root
-      - SPRING_DATASOURCE_PASSWORD=${MYSQL_ROOT_PASSWORD}
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/${MYSQL_DATABASE}?useSSL=true&requireSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      - SPRING_DATASOURCE_USERNAME=${MYSQL_USER}
+      - SPRING_DATASOURCE_PASSWORD=${MYSQL_PASSWORD}
       - SPRING_JPA_HIBERNATE_DDL-AUTO=update
+      - SPRING_JPA_SHOW_SQL=false
       - SPRING_REDIS_HOST=redis
       - SPRING_REDIS_PORT=6379
+      - SPRING_REDIS_PASSWORD=${REDIS_PASSWORD}
+      - GATEWAY_URL=http://revcart-gateway:8080
+      - USER_SERVICE_URL=http://revcart-gateway:8080
+      - PRODUCT_SERVICE_URL=http://revcart-gateway:8080
+      - CART_SERVICE_URL=http://revcart-gateway:8080
+      - PAYMENT_SERVICE_URL=http://revcart-gateway:8080
+      - DELIVERY_SERVICE_URL=http://revcart-gateway:8080
+      - NOTIFICATION_SERVICE_URL=http://revcart-gateway:8080
+      - SERVICES_DELIVERY-SERVICE_URL=http://revcart-gateway:8080
+      - SERVICES_PAYMENT-SERVICE_URL=http://revcart-gateway:8080
+      - SERVICES_USER-SERVICE_URL=http://revcart-gateway:8080
+      - SERVICES_PRODUCT-SERVICE_URL=http://revcart-gateway:8080
+      - SERVICES_CART-SERVICE_URL=http://revcart-gateway:8080
+      - SERVICES_NOTIFICATION-SERVICE_URL=http://revcart-gateway:8080
+      - DB_HOST=mysql
+      - DB_PORT=3306
+      - PORT=8084
+      - LOGGING_LEVEL_ROOT=WARN
+      - LOGGING_LEVEL_COM_REVCART=INFO
     depends_on:
       mysql:
         condition: service_healthy
+      redis:
+        condition: service_healthy
     networks:
       - revcart-network
-    restart: always
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8084/actuator/health"]
+      timeout: 10s
+      retries: 5
+      interval: 30s
+      start_period: 60s
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '0.75'
+        reservations:
+          memory: 768M
+          cpus: '0.5'
 
   payment-service:
     image: ${DOCKER_REGISTRY}/revcart-payment-service:latest
@@ -122,19 +247,43 @@ services:
     ports:
       - "8085:8085"
     environment:
+      - SPRING_PROFILES_ACTIVE=prod
       - SERVER_PORT=8085
-      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/${MYSQL_DATABASE}
-      - SPRING_DATASOURCE_USERNAME=root
-      - SPRING_DATASOURCE_PASSWORD=${MYSQL_ROOT_PASSWORD}
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/${MYSQL_DATABASE}?useSSL=true&requireSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      - SPRING_DATASOURCE_USERNAME=${MYSQL_USER}
+      - SPRING_DATASOURCE_PASSWORD=${MYSQL_PASSWORD}
       - SPRING_JPA_HIBERNATE_DDL-AUTO=update
+      - SPRING_JPA_SHOW_SQL=false
       - SPRING_REDIS_HOST=redis
       - SPRING_REDIS_PORT=6379
+      - SPRING_REDIS_PASSWORD=${REDIS_PASSWORD}
+      - SERVICES_ORDER-SERVICE_URL=http://revcart-gateway:8080
+      - SERVICES_USER-SERVICE_URL=http://revcart-gateway:8080
+      - SERVICES_NOTIFICATION-SERVICE_URL=http://revcart-gateway:8080
+      - LOGGING_LEVEL_ROOT=WARN
+      - LOGGING_LEVEL_COM_REVCART=INFO
     depends_on:
       mysql:
         condition: service_healthy
+      redis:
+        condition: service_healthy
     networks:
       - revcart-network
-    restart: always
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8085/actuator/health"]
+      timeout: 10s
+      retries: 5
+      interval: 30s
+      start_period: 60s
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 768M
+          cpus: '0.5'
+        reservations:
+          memory: 512M
+          cpus: '0.25'
 
   delivery-service:
     image: ${DOCKER_REGISTRY}/revcart-delivery-service:latest
@@ -142,19 +291,43 @@ services:
     ports:
       - "8086:8086"
     environment:
+      - SPRING_PROFILES_ACTIVE=prod
       - SERVER_PORT=8086
-      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/${MYSQL_DATABASE}
-      - SPRING_DATASOURCE_USERNAME=root
-      - SPRING_DATASOURCE_PASSWORD=${MYSQL_ROOT_PASSWORD}
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/${MYSQL_DATABASE}?useSSL=true&requireSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      - SPRING_DATASOURCE_USERNAME=${MYSQL_USER}
+      - SPRING_DATASOURCE_PASSWORD=${MYSQL_PASSWORD}
       - SPRING_JPA_HIBERNATE_DDL-AUTO=update
+      - SPRING_JPA_SHOW_SQL=false
       - SPRING_REDIS_HOST=redis
       - SPRING_REDIS_PORT=6379
+      - SPRING_REDIS_PASSWORD=${REDIS_PASSWORD}
+      - SERVICES_ORDER-SERVICE_URL=http://revcart-gateway:8080
+      - SERVICES_USER-SERVICE_URL=http://revcart-gateway:8080
+      - SERVICES_NOTIFICATION-SERVICE_URL=http://revcart-gateway:8080
+      - LOGGING_LEVEL_ROOT=WARN
+      - LOGGING_LEVEL_COM_REVCART=INFO
     depends_on:
       mysql:
         condition: service_healthy
+      redis:
+        condition: service_healthy
     networks:
       - revcart-network
-    restart: always
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8086/actuator/health"]
+      timeout: 10s
+      retries: 5
+      interval: 30s
+      start_period: 60s
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
+        reservations:
+          memory: 256M
+          cpus: '0.25'
 
   notification-service:
     image: ${DOCKER_REGISTRY}/revcart-notification-service:latest
@@ -162,19 +335,40 @@ services:
     ports:
       - "8087:8087"
     environment:
+      - SPRING_PROFILES_ACTIVE=prod
       - SERVER_PORT=8087
-      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/${MYSQL_DATABASE}
-      - SPRING_DATASOURCE_USERNAME=root
-      - SPRING_DATASOURCE_PASSWORD=${MYSQL_ROOT_PASSWORD}
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/${MYSQL_DATABASE}?useSSL=true&requireSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      - SPRING_DATASOURCE_USERNAME=${MYSQL_USER}
+      - SPRING_DATASOURCE_PASSWORD=${MYSQL_PASSWORD}
       - SPRING_JPA_HIBERNATE_DDL-AUTO=update
+      - SPRING_JPA_SHOW_SQL=false
       - SPRING_REDIS_HOST=redis
       - SPRING_REDIS_PORT=6379
+      - SPRING_REDIS_PASSWORD=${REDIS_PASSWORD}
+      - LOGGING_LEVEL_ROOT=WARN
+      - LOGGING_LEVEL_COM_REVCART=INFO
     depends_on:
       mysql:
         condition: service_healthy
+      redis:
+        condition: service_healthy
     networks:
       - revcart-network
-    restart: always
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8087/actuator/health"]
+      timeout: 10s
+      retries: 5
+      interval: 30s
+      start_period: 60s
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
+        reservations:
+          memory: 256M
+          cpus: '0.25'
 
   analytics-service:
     image: ${DOCKER_REGISTRY}/revcart-analytics-service:latest
@@ -182,22 +376,43 @@ services:
     ports:
       - "8088:8088"
     environment:
+      - SPRING_PROFILES_ACTIVE=prod
       - SERVER_PORT=8088
-      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/${MYSQL_DATABASE}
-      - SPRING_DATASOURCE_USERNAME=root
-      - SPRING_DATASOURCE_PASSWORD=${MYSQL_ROOT_PASSWORD}
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/${MYSQL_DATABASE}?useSSL=true&requireSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      - SPRING_DATASOURCE_USERNAME=${MYSQL_USER}
+      - SPRING_DATASOURCE_PASSWORD=${MYSQL_PASSWORD}
       - SPRING_JPA_HIBERNATE_DDL-AUTO=update
+      - SPRING_JPA_SHOW_SQL=false
       - SPRING_REDIS_HOST=redis
       - SPRING_REDIS_PORT=6379
+      - SPRING_REDIS_PASSWORD=${REDIS_PASSWORD}
       - SERVICES_ORDER-SERVICE_URL=http://order-service:8084
       - SERVICES_PRODUCT-SERVICE_URL=http://product-service:8082
       - SERVICES_USER-SERVICE_URL=http://user-service:8081
+      - LOGGING_LEVEL_ROOT=WARN
+      - LOGGING_LEVEL_COM_REVCART=INFO
     depends_on:
       mysql:
         condition: service_healthy
+      redis:
+        condition: service_healthy
     networks:
       - revcart-network
-    restart: always
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8088/actuator/health"]
+      timeout: 10s
+      retries: 5
+      interval: 30s
+      start_period: 60s
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
+        reservations:
+          memory: 256M
+          cpus: '0.25'
 
   revcart-gateway:
     image: ${DOCKER_REGISTRY}/revcart-gateway:latest
@@ -205,6 +420,8 @@ services:
     ports:
       - "8080:8080"
     environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      - SERVER_PORT=8080
       - SPRING_CLOUD_GATEWAY_ROUTES[0]_ID=user-service
       - SPRING_CLOUD_GATEWAY_ROUTES[0]_URI=http://user-service:8081
       - SPRING_CLOUD_GATEWAY_ROUTES[0]_PREDICATES[0]=Path=/api/users/**
@@ -214,31 +431,111 @@ services:
       - SPRING_CLOUD_GATEWAY_ROUTES[2]_ID=category-service
       - SPRING_CLOUD_GATEWAY_ROUTES[2]_URI=http://product-service:8082
       - SPRING_CLOUD_GATEWAY_ROUTES[2]_PREDICATES[0]=Path=/api/categories/**
-      - SPRING_CLOUD_GATEWAY_GLOBALCORS_CORSCONFIGURATIONS_[/**]_ALLOWEDORIGINS=*
+      - SPRING_CLOUD_GATEWAY_ROUTES[3]_ID=cart-service
+      - SPRING_CLOUD_GATEWAY_ROUTES[3]_URI=http://cart-service:8083
+      - SPRING_CLOUD_GATEWAY_ROUTES[3]_PREDICATES[0]=Path=/api/cart/**
+      - SPRING_CLOUD_GATEWAY_ROUTES[4]_ID=order-service
+      - SPRING_CLOUD_GATEWAY_ROUTES[4]_URI=http://order-service:8084
+      - SPRING_CLOUD_GATEWAY_ROUTES[4]_PREDICATES[0]=Path=/api/orders/**
+      - SPRING_CLOUD_GATEWAY_ROUTES[5]_ID=payment-service
+      - SPRING_CLOUD_GATEWAY_ROUTES[5]_URI=http://payment-service:8085
+      - SPRING_CLOUD_GATEWAY_ROUTES[5]_PREDICATES[0]=Path=/api/payments/**
+      - SPRING_CLOUD_GATEWAY_ROUTES[6]_ID=delivery-service
+      - SPRING_CLOUD_GATEWAY_ROUTES[6]_URI=http://delivery-service:8086
+      - SPRING_CLOUD_GATEWAY_ROUTES[6]_PREDICATES[0]=Path=/api/delivery/**
+      - SPRING_CLOUD_GATEWAY_ROUTES[7]_ID=notification-service
+      - SPRING_CLOUD_GATEWAY_ROUTES[7]_URI=http://notification-service:8087
+      - SPRING_CLOUD_GATEWAY_ROUTES[7]_PREDICATES[0]=Path=/api/notifications/**
+      - SPRING_CLOUD_GATEWAY_ROUTES[8]_ID=analytics-service
+      - SPRING_CLOUD_GATEWAY_ROUTES[8]_URI=http://analytics-service:8088
+      - SPRING_CLOUD_GATEWAY_ROUTES[8]_PREDICATES[0]=Path=/api/analytics/**
+      - SPRING_CLOUD_GATEWAY_ROUTES[9]_ID=profile-service
+      - SPRING_CLOUD_GATEWAY_ROUTES[9]_URI=http://user-service:8081
+      - SPRING_CLOUD_GATEWAY_ROUTES[9]_PREDICATES[0]=Path=/api/profile/**
+      - SPRING_CLOUD_GATEWAY_ROUTES[10]_ID=admin-orders
+      - SPRING_CLOUD_GATEWAY_ROUTES[10]_URI=http://order-service:8084
+      - SPRING_CLOUD_GATEWAY_ROUTES[10]_PREDICATES[0]=Path=/api/admin/orders/**
+      - SPRING_CLOUD_GATEWAY_ROUTES[11]_ID=websocket-service
+      - SPRING_CLOUD_GATEWAY_ROUTES[11]_URI=http://notification-service:8087
+      - SPRING_CLOUD_GATEWAY_ROUTES[11]_PREDICATES[0]=Path=/ws/**
+      - SPRING_CLOUD_GATEWAY_ROUTES[12]_ID=admin-stats
+      - SPRING_CLOUD_GATEWAY_ROUTES[12]_URI=http://analytics-service:8088
+      - SPRING_CLOUD_GATEWAY_ROUTES[12]_PREDICATES[0]=Path=/api/admin/dashboard/**
+      - SPRING_CLOUD_GATEWAY_ROUTES[13]_ID=admin-users
+      - SPRING_CLOUD_GATEWAY_ROUTES[13]_URI=http://user-service:8081
+      - SPRING_CLOUD_GATEWAY_ROUTES[13]_PREDICATES[0]=Path=/api/admin/users/**
+      - SPRING_CLOUD_GATEWAY_GLOBALCORS_CORSCONFIGURATIONS_[/**]_ALLOWEDORIGINPATTERNS=*
       - SPRING_CLOUD_GATEWAY_GLOBALCORS_CORSCONFIGURATIONS_[/**]_ALLOWEDMETHODS=*
       - SPRING_CLOUD_GATEWAY_GLOBALCORS_CORSCONFIGURATIONS_[/**]_ALLOWEDHEADERS=*
       - SPRING_CLOUD_GATEWAY_GLOBALCORS_CORSCONFIGURATIONS_[/**]_ALLOWCREDENTIALS=true
+      - SPRING_CLOUD_GATEWAY_GLOBALCORS_CORSCONFIGURATIONS_[/**]_MAXAGE=3600
+      - LOGGING_LEVEL_ROOT=WARN
+      - LOGGING_LEVEL_COM_REVCART=INFO
+      - MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE=health,info,metrics,gateway
     depends_on:
       - user-service
       - product-service
+      - cart-service
+      - order-service
+      - payment-service
+      - delivery-service
+      - notification-service
+      - analytics-service
     networks:
       - revcart-network
-    restart: always
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/actuator/health"]
+      timeout: 10s
+      retries: 5
+      interval: 30s
+      start_period: 60s
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
+        reservations:
+          memory: 256M
+          cpus: '0.25'
 
   frontend:
     image: ${DOCKER_REGISTRY}/revcart-frontend:latest
     container_name: revcart-frontend
     ports:
       - "80:80"
+    environment:
+      - NGINX_WORKER_PROCESSES=auto
+      - NGINX_WORKER_CONNECTIONS=1024
     depends_on:
-      - revcart-gateway
+      revcart-gateway:
+        condition: service_healthy
     networks:
       - revcart-network
-    restart: always
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80"]
+      timeout: 10s
+      retries: 3
+      interval: 30s
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+          cpus: '0.25'
+        reservations:
+          memory: 64M
+          cpus: '0.1'
 
 volumes:
   mysql_data:
+    driver: local
+  redis_data:
+    driver: local
 
 networks:
   revcart-network:
     driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16

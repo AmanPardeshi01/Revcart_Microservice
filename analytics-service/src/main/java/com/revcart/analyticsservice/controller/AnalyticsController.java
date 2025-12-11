@@ -52,4 +52,10 @@ public class AnalyticsController {
         DashboardDto dashboard = analyticsService.computeDashboardData();
         return ResponseEntity.ok(ApiResponse.success(dashboard));
     }
+
+    @GetMapping("/admin/dashboard/stats")
+    public ResponseEntity<ApiResponse<DashboardDto>> getAdminDashboardStats() {
+        DashboardDto dashboard = analyticsService.computeDashboardData();
+        return ResponseEntity.ok(ApiResponse.success(dashboard));
+    }
 }

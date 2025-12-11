@@ -1,0 +1,24 @@
+# Docker Registry
+DOCKER_REGISTRY=amanpardeshi01
+
+# Database Configuration
+MYSQL_ROOT_PASSWORD=RevCart@2024!Root
+MYSQL_DATABASE=revcart_production
+MYSQL_USER=revcart_user
+MYSQL_PASSWORD=RevCart@2024!User
+
+# Redis Configuration
+REDIS_PASSWORD=RevCart@2024!Redis
+
+# JWT Configuration
+JWT_SECRET=RevCart2024ProductionSecretKeyForJWTTokenGenerationThatIsAtLeast64CharactersLongForHS512AlgorithmSecurity
+JWT_EXPIRATION=86400000
+
+# Email Configuration (Update with real SMTP credentials)
+MAIL_HOST=smtp.gmail.com
+MAIL_PORT=587
+MAIL_USERNAME=your-email@gmail.com
+MAIL_PASSWORD=your-app-password
+
+# Application Configuration
+SPRING_PROFILES_ACTIVE=prod

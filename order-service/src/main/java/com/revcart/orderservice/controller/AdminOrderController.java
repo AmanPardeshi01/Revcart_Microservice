@@ -106,6 +106,15 @@ public class AdminOrderController {
         return ResponseEntity.ok(order);
     }
 
+    @PostMapping("/orders/{orderId}/assign-delivery-agent")
+    public ResponseEntity<ApiResponse<OrderDto>> assignDeliveryAgent(
+            @PathVariable Long orderId,
+            @RequestBody Map<String, Object> request) {
+        Long deliveryAgentId = Long.valueOf(request.get("deliveryAgentId").toString());
+        OrderDto order = orderService.assignDeliveryAgent(orderId, deliveryAgentId);
+        return ResponseEntity.ok(ApiResponse.success(order, "Delivery agent assigned"));
+    }
+
     @GetMapping("/dashboard/stats")
     public ResponseEntity<ApiResponse<Map<String, Object>>> getDashboardStats() {
         Map<String, Object> stats = orderService.getDashboardStats();

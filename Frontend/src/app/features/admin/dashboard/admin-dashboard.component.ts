@@ -159,28 +159,42 @@ export class AdminDashboardComponent implements OnInit {
           this.stats.activeUsers = count;
           console.log('Active users count:', count);
         },
-        error: err => console.error('Active users count error:', err)
+        error: err => {
+          console.error('Active users count error:', err);
+          this.stats.activeUsers = 0; // Set default for local dev
+        }
       });
 
     this.http.get<any>(`${environment.apiUrl}/admin/dashboard/stats`)
       .subscribe({
         next: (response) => {
           if (response.success && response.data) {
-            this.stats.totalOrders = response.data.totalOrders || 0;
-            this.stats.totalRevenue = response.data.totalRevenue || 0;
-            this.stats.totalProducts = response.data.totalProducts || 0;
+            const data = response.data;
+            this.stats.totalOrders = data.orderAnalytics?.totalOrders || 0;
+            this.stats.totalRevenue = data.orderAnalytics?.totalRevenue || 0;
+            this.stats.totalProducts = data.productAnalytics?.totalProducts || 0;
             // Don't override activeUsers if already set
-            if (!this.stats.activeUsers && response.data.activeUsers) {
-              this.stats.activeUsers = response.data.activeUsers;
+            if (!this.stats.activeUsers && data.userAnalytics?.totalUsers) {
+              this.stats.activeUsers = data.userAnalytics.totalUsers;
             }
           }
         },
-        error: err => console.error('Dashboard stats error:', err)
+        error: err => {
+          console.error('Dashboard stats error:', err);
+          // Calculate from recent orders if available
+          this.calculateStatsFromOrders();
+        }
       });
 
     this.productService.getProducts()
-      .subscribe((products) => {
-        this.stats.inStock = products.filter(p => p.inStock).length;
+      .subscribe({
+        next: (products) => {
+          this.stats.inStock = products.filter(p => p.inStock).length;
+        },
+        error: err => {
+          console.error('Products error:', err);
+          this.stats.inStock = 0;
+        }
       });
   }
 
@@ -196,7 +210,11 @@ export class AdminDashboardComponent implements OnInit {
             total: order.totalAmount
           }));
         },
-        error: err => console.error('Recent orders error:', err)
+        error: err => {
+          console.error('Recent orders error:', err);
+          this.recentOrders = [];
+          this.calculateStatsFromOrders();
+        }
       });
   }
 
@@ -223,5 +241,22 @@ export class AdminDashboardComponent implements OnInit {
       'cancelled': 'bg-red-100 text-red-800'
     };
     return styleMap[status] || 'bg-gray-100 text-gray-800';
+  }
+
+  private calculateStatsFromOrders(): void {
+    this.stats.totalOrders = this.recentOrders.length;
+    this.stats.totalRevenue = this.recentOrders.reduce((sum, order) => sum + order.total, 0);
+    
+    // Get products count from service if available
+    this.productService.getProducts().subscribe({
+      next: (products) => {
+        this.stats.totalProducts = products.length;
+        this.stats.inStock = products.filter(p => p.inStock).length;
+      },
+      error: () => {
+        this.stats.totalProducts = 0;
+        this.stats.inStock = 0;
+      }
+    });
   }
 }

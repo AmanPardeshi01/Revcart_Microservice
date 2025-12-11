@@ -152,75 +152,101 @@ export class DeliveryDashboardComponent implements OnInit {
 
     console.log('Loading deliveries for user:', userId);
 
-    // Assigned
-    this.http.get<ApiResponse<any[]>>(`${environment.apiUrl}/delivery/orders/assigned`, { headers })
+    // Load orders from order service based on status
+    this.loadOrdersByStatus();
+
+
+  }
+
+  private loadOrdersByStatus(): void {
+    // Get all orders and filter by status and delivery agent
+    this.http.get<ApiResponse<any[]>>(`${environment.apiUrl}/orders/all`)
       .subscribe({
         next: resp => {
-          console.log('Assigned orders response:', resp);
           if (resp.success && resp.data) {
-            this.assignedOrders = resp.data.map(this.mapBackendOrder);
-          } else {
-            this.assignedOrders = [];
+            const allOrders = resp.data;
+            const userStr = localStorage.getItem('revcart_user');
+            let userId = '';
+            if (userStr) {
+              const user = JSON.parse(userStr);
+              userId = user.id?.toString() || '';
+            }
+
+            // Pending orders (PENDING status, no delivery agent assigned)
+            this.pendingOrders = allOrders
+              .filter(o => o.status === 'PENDING')
+              .map(this.mapBackendOrder);
+
+            // Assigned orders (PACKED or OUT_FOR_DELIVERY status, assigned to this delivery agent)
+            this.assignedOrders = allOrders
+              .filter(o => (o.status === 'PACKED' || o.status === 'OUT_FOR_DELIVERY') && o.deliveryAgentId?.toString() === userId)
+              .map(this.mapBackendOrder);
+
+            // In transit orders (OUT_FOR_DELIVERY status, assigned to this delivery agent)
+            this.inTransitOrders = allOrders
+              .filter(o => o.status === 'OUT_FOR_DELIVERY' && o.deliveryAgentId?.toString() === userId)
+              .map(this.mapBackendOrder);
+
+            // Calculate delivered today (orders delivered by this agent today)
+            this.deliveredToday = allOrders
+              .filter(o => o.status === 'DELIVERED' && o.deliveryAgentId?.toString() === userId)
+              .filter(o => this.isToday(o.updatedAt))
+              .length;
           }
-          this.calculateDelivered();
         },
         error: err => {
-          console.error('Failed to load assigned orders:', err);
+          console.error('Failed to load orders:', err);
           this.assignedOrders = [];
-        }
-      });
-
-    // In transit
-    this.http.get<ApiResponse<any[]>>(`${environment.apiUrl}/delivery/orders/in-transit`, { headers })
-      .subscribe({
-        next: resp => {
-          console.log('In-transit orders response:', resp);
-          if (resp.success && resp.data) {
-            this.inTransitOrders = resp.data.map(this.mapBackendOrder);
-          } else {
-            this.inTransitOrders = [];
-          }
-        },
-        error: err => {
-          console.error('Failed to load in-transit orders:', err);
           this.inTransitOrders = [];
-        }
-      });
-
-    // Pending
-    this.http.get<ApiResponse<any[]>>(`${environment.apiUrl}/delivery/orders/pending`, { headers })
-      .subscribe({
-        next: resp => {
-          console.log('Pending orders response:', resp);
-          if (resp.success && resp.data) {
-            this.pendingOrders = resp.data.map(this.mapBackendOrder);
-          } else {
-            this.pendingOrders = [];
-          }
-        },
-        error: err => {
-          console.error('Failed to load pending orders:', err);
           this.pendingOrders = [];
+          this.deliveredToday = 0;
         }
       });
   }
 
-  private calculateDelivered(): void {
-    this.deliveredToday = this.assignedOrders.filter(o => o.status === 'delivered').length;
+  private isToday(dateStr: string): boolean {
+    if (!dateStr) return false;
+    const date = new Date(dateStr);
+    const today = new Date();
+    return date.toDateString() === today.toDateString();
   }
 
   updateOrderStatus(orderId: string, status: Order['status']) {
     const mapping: any = {
-      'in_transit': 'IN_TRANSIT',
+      'in_transit': 'OUT_FOR_DELIVERY',
       'delivered': 'DELIVERED'
     };
 
     const backendStatus = mapping[status];
 
+    // Update status and handle UI changes locally
     this.http.post<ApiResponse<any>>(
-      `${environment.apiUrl}/delivery/orders/${orderId}/status`,
+      `${environment.apiUrl}/admin/orders/${orderId}/status`,
       { status: backendStatus }
-    ).subscribe(() => this.loadDeliveries());
+    ).subscribe({
+      next: () => {
+        // Update UI locally without full reload
+        if (status === 'delivered') {
+          // Increment delivered today count
+          this.deliveredToday++;
+          // Remove from assigned orders
+          this.assignedOrders = this.assignedOrders.filter(o => o.id !== orderId);
+          // Remove from in transit orders
+          this.inTransitOrders = this.inTransitOrders.filter(o => o.id !== orderId);
+        } else if (status === 'in_transit') {
+          // Update order status in assigned orders
+          const order = this.assignedOrders.find(o => o.id === orderId);
+          if (order) {
+            order.status = 'in_transit';
+          }
+          // Add to in transit if not already there
+          if (order && !this.inTransitOrders.find(o => o.id === orderId)) {
+            this.inTransitOrders.push(order);
+          }
+        }
+      },
+      error: (err) => console.error('Failed to update status:', err)
+    });
   }
 
   private mapBackendOrder = (dto: any): Order => ({

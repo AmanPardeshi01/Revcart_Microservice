@@ -1,5 +1,6 @@
 package com.revcart.analyticsservice.client;
 
+import com.revcart.analyticsservice.dto.ApiResponse;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.GetMapping;
 
@@ -10,5 +11,5 @@ import java.util.Map;
 public interface OrderServiceClient {
     
     @GetMapping("/api/orders/all")
-    List<Map<String, Object>> getAllOrders();
+    ApiResponse<List<Map<String, Object>>> getAllOrders();
 }
